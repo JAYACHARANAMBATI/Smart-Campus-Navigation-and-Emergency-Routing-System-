@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🌍 Rapid KARE Ambulance Service</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #f3ec78, #af4261);
+        color: #333;
+      }
+      .card {
+        background: white;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        border-radius: 1rem;
+        overflow: hidden;
+      }
+      .map-button {
+        transition: transform 0.2s;
+      }
+      .map-button:hover {
+        transform: scale(1.05);
+      }
+      .stroked-text {
+        color: transparent;
+        -webkit-text-stroke: 2px blue;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body
+    class="flex items-center justify-center min-h-screen bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 text-gray-800"
+  >
+    <div class="container mx-auto p-6 md:p-10 lg:w-3/4 xl:w-1/2 card">
+      <h1 class="text-3xl md:text-4xl font-bold text-blue-600 text-center mb-6">
+        🌍 Rapid <span class="stroked-text">KARE</span> Ambulance Service
+      </h1>
+      <p class="text-center text-gray-500 mb-8">
+        Easily get directions to your destination 🗺
+      </p>
+
+      <div class="mb-6">
+        <label
+          for="destination"
+          class="block text-lg font-semibold text-gray-700"
+          ><i class="fas fa-map-marker-alt text-blue-500"></i> Select
+          Destination (Campus):</label
+        >
+        <select
+          id="destination"
+          name="destination"
+          class="w-full mt-2 p-3 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        >
+          <option value="">Select a location...</option>
+          {% for location in locations %}
+          <option value="{{ location }}">{{ location }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-6">
+        <label
+          for="customAddress"
+          class="block text-lg font-semibold text-gray-700"
+          ><i class="fas fa-map text-blue-500"></i> Or Enter Custom
+          Address:</label
+        >
+        <input
+          type="text"
+          id="customAddress"
+          name="custom_address"
+          placeholder="Enter address in India"
+          class="w-full mt-2 p-3 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+      </div>
+
+      <div class="flex items-center mb-6">
+        <input
+          type="checkbox"
+          class="form-check-input mr-2"
+          id="returnTrip"
+          name="return_trip"
+        />
+        <label
+          class="form-check-label text-lg font-semibold text-gray-700"
+          for="returnTrip"
+          ><i class="fas fa-exchange-alt text-blue-500"></i> Return Trip</label
+        >
+      </div>
+
+      <div class="flex flex-col md:flex-row gap-4 justify-center">
+        <button
+          type="button"
+          class="btn bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded-lg shadow-md transition-all transform hover:scale-105"
+          onclick="getRoute()"
+        >
+          🚗 Find Route
+        </button>
+        <button
+          type="button"
+          class="btn bg-green-500 hover:bg-green-600 text-white py-2 px-6 rounded-lg shadow-md transition-all transform hover:scale-105"
+          onclick="startLiveLocation()"
+        >
+          📍 Enable Live Location
+        </button>
+      </div>
+
+      <div id="routeInfo" class="mt-6 text-blue-700 text-center text-lg"></div>
+
+      <div
+        id="map-container"
+        class="relative w-full h-80 mt-8 bg-blue-50 rounded-lg overflow-hidden shadow-lg"
+      >
+        <iframe
+          id="map-frame"
+          src="/map"
+          class="w-full h-full rounded-md"
+        ></iframe>
+        <button
+          class="map-button absolute bottom-4 right-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md shadow-md transition-all"
+          onclick="toggleFullScreen()"
+        >
+          🔍 Full Screen
+        </button>
+        <button
+          class="map-button absolute bottom-16 right-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md shadow-md transition-all"
+          onclick="recenterMap()"
+        >
+          📌 Re-center
+        </button>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      let currentPosition = null;
+
+      async function getRoute() {
+        const destination = document.getElementById("destination").value;
+        const customAddress = document.getElementById("customAddress").value;
+        const returnTrip = document.getElementById("returnTrip").checked;
+
+        if (!destination && !customAddress) {
+          alert("⚠ Please select a destination or enter a custom address.");
+          return;
+        }
+
+        document.getElementById("routeInfo").innerText =
+          "🕒 Loading route information...";
+
+        try {
+          const response = await fetch("/get_route", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              destination: destination || null,
+              custom_address: customAddress || null,
+              return_trip: returnTrip,
+              live_location: currentPosition,
+            }),
+          });
+          const data = await response.json();
+
+          if (data.route_available) {
+            document.getElementById("routeInfo").innerText = `📏 Distance: ${data.distance}, ⏱ Duration: ${data.duration}`;
+            document.getElementById(
+              "map-frame"
+            ).src = `/map?lat=${data.start_lat}&lng=${data.start_lng}&destination=${data.destination}`;
+          } else {
+            document.getElementById("routeInfo").innerText =
+              "❌ Route unavailable. Please check the address or selection.";
+          }
+        } catch (error) {
+          document.getElementById("routeInfo").innerText =
+            "⚠ An error occurred. Please try again.";
+        }
+      }
+
+      function startLiveLocation() {
+        if (navigator.geolocation) {
+          navigator.geolocation.watchPosition(updateLiveLocation, handleError, {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0,
+          });
+        } else {
+          alert("⚠ Geolocation is not supported by this browser.");
+        }
+      }
+
+      async function updateLiveLocation(position) {
+        currentPosition = [position.coords.latitude, position.coords.longitude];
+        document.getElementById("routeInfo").innerText =
+          "📍 Live location enabled. Fetching directions from your location.";
+        getRoute();
+      }
+
+      function handleError(error) {
+        console.warn(`ERROR(${error.code}): ${error.message}`);
+        document.getElementById("routeInfo").innerText =
+          "⚠ Unable to retrieve live location.";
+      }
+
+      function recenterMap() {
+        if (currentPosition) {
+          const [latitude, longitude] = currentPosition;
+          document.getElementById(
+            "map-frame"
+          ).src = `/map?lat=${latitude}&lng=${longitude}`;
+        } else {
+          alert(
+            "⚠ Live location is not available. Please enable live location first."
+          );
+        }
+      }
+
+      function toggleFullScreen() {
+        const mapContainer = document.getElementById("map-container");
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else {
+          mapContainer.requestFullscreen().catch((err) => {
+            alert(`Error attempting to enable full-screen mode: ${err.message}`);
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

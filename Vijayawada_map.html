@@ -1,0 +1,27 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Google Map of Vijayawada</title>
+            <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDOudVwAfmvxFGEIfW3PHaVR4X-YOkdldo"></script>
+            <script>
+                function initMap() {
+                    var location = { lat: 16.5061743, lng: 80.6480153 };
+                    var map = new google.maps.Map(document.getElementById('map'), {
+                        zoom: 6,
+                        center: location
+                    });
+                    var marker = new google.maps.Marker({
+                        position: location,
+                        map: map,
+                        title: "Vijayawada"
+                    });
+                }
+            </script>
+        </head>
+        <body onload="initMap()">
+            <h3>Google Map of Vijayawada</h3>
+            <div id="map" style="height: 500px; width: 100%;"></div>
+        </body>
+        </html>
+        
